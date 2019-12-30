@@ -11,6 +11,21 @@ namespace RoyT.TrueType
 {
     public sealed class TrueTypeFont
     {
+        public static TrueTypeFont FromStream(Stream stream)
+        {
+            using (var reader = new FontReader(stream))
+            {
+                var offsetTable = OffsetTable.FromReader(reader);
+                var entries = ReadTableRecords(reader, offsetTable);
+
+                var cmap = ReadCmapTable(string.Empty, reader, entries);
+                var name = ReadNameTable(string.Empty, reader, entries);
+                var kern = ReadKernTable(reader, entries);
+
+                return new TrueTypeFont(string.Empty, offsetTable, entries, cmap, name, kern);
+            }
+        }
+
         public static TrueTypeFont FromFile(string path)
         {
             using (var reader = new FontReader(File.OpenRead(path)))
@@ -25,7 +40,7 @@ namespace RoyT.TrueType
                 return new TrueTypeFont(path, offsetTable, entries, cmap, name, kern);
             }
         }
-      
+
         public static bool TryGetTablePosition(FontReader reader, string tableName, out long offset)
         {
             reader.Seek(0);
@@ -68,7 +83,7 @@ namespace RoyT.TrueType
         }
 
         private static NameTable ReadNameTable(string path, FontReader reader, IReadOnlyDictionary<string, TableRecordEntry> entries)
-        {            
+        {
             if (entries.TryGetValue("name", out var cmapEntry))
             {
                 reader.Seek(cmapEntry.Offset);
@@ -88,9 +103,9 @@ namespace RoyT.TrueType
                 return KernTable.FromReader(reader);
             }
 
-            return KernTable.Empty;            
+            return KernTable.Empty;
         }
-        
+
         private TrueTypeFont(string source, OffsetTable offsetTable, IReadOnlyDictionary<string, TableRecordEntry> entries, CmapTable cmapTable, NameTable nameTable, KernTable kernTable)
         {
             this.Source = source;
@@ -104,7 +119,7 @@ namespace RoyT.TrueType
         public string Source { get; }
         public OffsetTable OffsetTable { get; }
         public IReadOnlyDictionary<string, TableRecordEntry> TableRecordEntries { get; }
-        
+
         /// <summary>
         /// Contains information to get the glyph that corresponds to each supported character
         /// </summary>
